@@ -1,0 +1,13 @@
+[package]
+name = "preview"
+version = "0.1.0"
+edition = "2021"
+description = "File previewer for yazi (Rust port of the original bash script)"
+
+[dependencies]
+flate2 = "1"
+wuff = { version = "0.2", default-features = false, features = ["brotli"] }
+
+[profile.release]
+lto = true
+strip = true
