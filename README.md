@@ -42,6 +42,29 @@ All arguments are hard-coded inside `main.lua`; the previewer accepts no user-pr
 
 Scrolling follows the old previewer convention: one skip unit is half a page for text, one page for PDFs, and one thumbnail step for videos.
 
+## Images over SSH
+
+`@@image:` is drawn by Yazi through whatever terminal image protocol it detected
+(kitty graphics, sixel, iTerm2 inline, …). Over SSH those are slow: the encoded
+image is pushed through the link on every hover.
+
+So inside an SSH session (`SSH_CONNECTION`, `SSH_TTY` or `SSH_CLIENT` set) the
+`preview` binary renders images as coloured unicode blocks with [chafa]
+instead. Everything that would have been announced with `@@image:` is covered
+— images, PDF pages, video thumbnails, RAF/SVG/ICNS conversions — and the blocks
+are cached as ANSI text next to the image caches, so revisiting a file costs a
+plain file read.
+
+| Variable | Effect |
+| --- | --- |
+| `YAZI_CHAFA_PREVIEW=1` | Always render with chafa, even locally |
+| `YAZI_CHAFA_PREVIEW=0` | Always use the terminal image protocol, even over SSH |
+
+Needs [chafa] ≥ 1.16 in `PATH`. Without it (or if it fails) the error is
+reported and the image is announced with `@@image:` as usual, so nothing breaks.
+
+[chafa]: https://hpjansson.org/chafa/
+
 ## License
 
 This plugin is MIT-licensed. For more information check the [LICENSE](LICENSE) file.

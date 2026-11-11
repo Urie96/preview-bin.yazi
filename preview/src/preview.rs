@@ -14,6 +14,7 @@ use crate::sys::{self, argv, os};
 pub(crate) struct Previewer {
     pub(crate) file: PathBuf,
     pub(crate) width: Option<usize>,
+    pub(crate) height: Option<usize>,
     pub(crate) offset: i64,
     pub(crate) mime: Option<String>,
     pub(crate) cache: Cache,
@@ -21,10 +22,11 @@ pub(crate) struct Previewer {
 
 impl Previewer {
     pub(crate) fn new(args: Args) -> Self {
-        let cache = Cache::new(args.test, args.width);
+        let cache = Cache::new(args.test, args.width, args.height);
         Self {
             file: args.path,
             width: args.width,
+            height: args.height,
             offset: args.offset,
             mime: args.mime,
             cache,

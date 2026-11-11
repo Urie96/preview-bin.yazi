@@ -4,6 +4,9 @@
 //!
 //! * image previews are announced with `@@image:<absolute path>` instead of
 //!   `__preview__image__path__ <path>`, and nothing is printed after it;
+//! * inside an SSH session images are rendered as cached ANSI text with
+//!   `chafa` instead (see `chafa.rs`), since terminal image protocols are slow
+//!   over a remote link;
 //! * Fujifilm RAF previews are extracted in-process (no `exiftool`);
 //! * WOFF 1.0 and WOFF2 files are converted to sfnt in-process (no helper scripts);
 //! * `__disable_auto_peek__` is gone;
@@ -18,6 +21,7 @@ mod apk;
 mod apple;
 mod archive;
 mod cache;
+mod chafa;
 mod cli;
 mod dmg;
 mod epub;

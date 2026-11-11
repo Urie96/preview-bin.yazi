@@ -43,14 +43,16 @@ pub struct Cache {
     dir: PathBuf,
     test: bool,
     width: Option<usize>,
+    height: Option<usize>,
 }
 
 impl Cache {
-    pub fn new(test: bool, width: Option<usize>) -> Self {
+    pub fn new(test: bool, width: Option<usize>, height: Option<usize>) -> Self {
         Self {
             dir: std::env::temp_dir().join("yazi"),
             test,
             width,
+            height,
         }
     }
 
@@ -113,13 +115,79 @@ impl Cache {
             }
             Kind::Image => {
                 let non_empty = fs::metadata(&path).map(|m| m.len() > 0).unwrap_or(false);
-                if non_empty {
-                    let abs = fs::canonicalize(&path).unwrap_or_else(|_| path.clone());
-                    println!("@@image:{}", abs.display());
+                if !non_empty {
+                    return None;
                 }
+
+                // Over SSH the terminal image protocol is slow, so render the
+                // cached image as ANSI text instead (`with_ansi` reports the
+                // reason itself, then we fall back to the image protocol).
+                if crate::chafa::enabled()
+                    && self.with_ansi(file, ext, |out| {
+                        crate::chafa::render(&path, self.width, self.height, out)
+                    })
+                {
+                    return None;
+                }
+
+                let abs = fs::canonicalize(&path).unwrap_or_else(|_| path.clone());
+                println!("@@image:{}", abs.display());
             }
         }
         None
+    }
+
+    /// Render an image to ANSI text with `chafa`, cache the text and stream it.
+    ///
+    /// `ext` is the extension of the image cache entry the text is rendered
+    /// from, if any. The text is cached under its own key suffix, since chafa's
+    /// output also depends on the preview height (the cache key only carries
+    /// the width).
+    ///
+    /// Returns `true` when the text was emitted, `false` when rendering failed
+    /// (the error is printed here), so the caller can fall back to the image
+    /// protocol.
+    pub fn with_ansi<F>(&self, file: &Path, ext: Option<&str>, render: F) -> bool
+    where
+        F: FnOnce(&Path) -> Result<(), GenError>,
+    {
+        let path = self.path_for(file, Some(&self.ansi_ext(ext)));
+
+        if !path.exists() && !self.test {
+            if let Some(parent) = path.parent() {
+                let _ = fs::create_dir_all(parent);
+            }
+            match render(&path) {
+                Ok(()) => {}
+                Err(GenError::Msg(msg)) => {
+                    if !msg.trim().is_empty() {
+                        sys::echo_err(&msg, self.width);
+                    }
+                    return false;
+                }
+                Err(GenError::StopPeek) => return false,
+            }
+        }
+
+        if fs::metadata(&path)
+            .map(|meta| meta.len() > 0)
+            .unwrap_or(false)
+        {
+            if let Err(err) = sys::stream_file(&path) {
+                sys::echo_err(&err, self.width);
+            }
+            return true;
+        }
+        false
+    }
+
+    /// Cache extension for the ANSI rendering of an image cache entry.
+    fn ansi_ext(&self, ext: Option<&str>) -> String {
+        let size = format!("{}x{}", self.width.unwrap_or(0), self.height.unwrap_or(0));
+        match ext {
+            Some(ext) => format!("{ext}.{size}.ansi"),
+            None => format!("{size}.ansi"),
+        }
     }
 }
 

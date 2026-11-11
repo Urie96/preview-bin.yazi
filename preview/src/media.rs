@@ -15,8 +15,19 @@ impl Previewer {
     // -----------------------------------------------------------------------
 
     pub(crate) fn handle_image(&self) -> i32 {
-        // `@@image:` is terminal: nothing is printed after it.
         let abs = fs::canonicalize(&self.file).unwrap_or_else(|_| self.file.clone());
+
+        // Over SSH the terminal image protocol pushes the encoded image through
+        // the link on every hover; blocks of text are cheaper and get cached.
+        if crate::chafa::enabled()
+            && self.cache.with_ansi(&self.file, None, |out| {
+                crate::chafa::render(&abs, self.width, self.height, out)
+            })
+        {
+            return 0;
+        }
+
+        // `@@image:` is terminal: nothing is printed after it.
         println!("@@image:{}", abs.display());
         0
     }

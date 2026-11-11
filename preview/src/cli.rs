@@ -13,7 +13,8 @@ OPTIONS:
     --mime <MIME>     MIME type provided by the caller; without it, `file(1)`
                       is asked for one
     --width <N>       preview width in columns; when omitted, no wrapping is done
-    --height <N>      accepted for compatibility; currently unused
+    --height <N>      preview height in rows; used when rendering images as
+                      text (see SSH / YAZI_CHAFA_PREVIEW)
     --offset <N>      page / thumbnail offset (default 0)
     --test            never generate, only reuse existing cache entries
     -h, --help        show this help
